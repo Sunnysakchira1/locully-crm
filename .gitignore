@@ -1,0 +1,7 @@
+node_modules/
+locully-crm.db
+locully-crm.db-journal
+locully-crm.db-wal
+locully-crm.db-shm
+.env
+.DS_Store

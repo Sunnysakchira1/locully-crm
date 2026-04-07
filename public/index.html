@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Locully CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          locully: { bg: '#F8F5F0', primary: '#E07B39', primaryDark: '#C4622A', ink: '#1A1A1A', border: '#E5E0D8' }
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: #F8F5F0; color: #1A1A1A; font-family: 'Inter', system-ui, sans-serif; }
+  .card { background: #fff; border: 1px solid #E5E0D8; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .btn-primary { background: #E07B39; color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 600; }
+  .btn-primary:hover { background: #C4622A; }
+  .btn-secondary { background: #fff; color: #1A1A1A; padding: 8px 16px; border-radius: 8px; font-weight: 500; border: 1px solid #E5E0D8; }
+  .btn-secondary:hover { background: #F8F5F0; }
+  .tab-btn { padding: 10px 16px; border-radius: 8px; font-weight: 500; color: #1A1A1A; }
+  .tab-btn.active { background: #E07B39; color: #fff; }
+  .tab-btn:not(.active):hover { background: #F1ECE2; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+  .kanban-col { min-width: 260px; flex: 1; background: #F1ECE2; border-radius: 12px; padding: 10px; }
+  .kanban-col.drag-over { background: #E5E0D8; outline: 2px dashed #E07B39; }
+  .kanban-card { background: #fff; border: 1px solid #E5E0D8; border-radius: 10px; padding: 10px; margin-bottom: 8px; cursor: grab; }
+  .kanban-card:active { cursor: grabbing; }
+  .modal-bg { background: rgba(0,0,0,0.4); position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .modal { background: #fff; border-radius: 12px; max-width: 640px; width: 92%; max-height: 90vh; overflow-y: auto; padding: 24px; }
+  input, select, textarea { border: 1px solid #E5E0D8; border-radius: 8px; padding: 8px 10px; width: 100%; background: #fff; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #E07B39; box-shadow: 0 0 0 3px rgba(224,123,57,0.15); }
+  label { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; display: block; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; color: #777; padding: 10px; border-bottom: 1px solid #E5E0D8; }
+  td { padding: 12px 10px; border-bottom: 1px solid #F1ECE2; font-size: 14px; }
+  tr:hover td { background: #FBF9F5; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<header class="border-b border-locully-border bg-white">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-locully-primary text-white font-bold flex items-center justify-center">L</div>
+      <div class="font-bold text-xl">Locully CRM</div>
+    </div>
+    <div id="current-date" class="text-sm text-gray-600"></div>
+  </div>
+  <nav class="max-w-7xl mx-auto px-6 pb-3 flex gap-2 flex-wrap">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="pipeline">Pipeline</button>
+    <button class="tab-btn" data-tab="enquiries">Enquiries</button>
+    <button class="tab-btn" data-tab="clients">Clients</button>
+    <button class="tab-btn" data-tab="activity">Activity Log</button>
+  </nav>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6">
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="tab-dashboard" class="tab-section">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="card p-5"><div class="text-sm text-gray-600">MRR</div><div id="kpi-mrr" class="text-3xl font-bold mt-1">฿0</div></div>
+      <div class="card p-5"><div class="text-sm text-gray-600">Active Clients</div><div id="kpi-clients" class="text-3xl font-bold mt-1">0</div></div>
+      <div class="card p-5"><div class="text-sm text-gray-600">Open Enquiries</div><div id="kpi-enquiries" class="text-3xl font-bold mt-1">0</div></div>
+      <div class="card p-5"><div class="text-sm text-gray-600">Pipeline Value</div><div id="kpi-pipeline" class="text-3xl font-bold mt-1">฿0</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div class="card p-5"><div class="font-semibold mb-3">Enquiries by Stage</div><canvas id="chart-stages" height="200"></canvas></div>
+      <div class="card p-5"><div class="font-semibold mb-3">Clients by Vertical</div><canvas id="chart-verticals" height="200"></canvas></div>
+    </div>
+
+    <div class="card p-5">
+      <div class="font-semibold mb-3">Recent Activity</div>
+      <div id="recent-activity" class="divide-y divide-locully-border"></div>
+    </div>
+  </section>
+
+  <!-- ============ PIPELINE ============ -->
+  <section id="tab-pipeline" class="tab-section hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">Pipeline</h2>
+      <button class="btn-primary" onclick="openEnquiryModal()">+ Add Enquiry</button>
+    </div>
+    <div id="kanban" class="flex gap-3 overflow-x-auto pb-4"></div>
+  </section>
+
+  <!-- ============ ENQUIRIES ============ -->
+  <section id="tab-enquiries" class="tab-section hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">Enquiries</h2>
+      <button class="btn-primary" onclick="openEnquiryModal()">+ Add Enquiry</button>
+    </div>
+    <div class="card p-4 mb-4 flex gap-3 flex-wrap">
+      <input id="enq-search" placeholder="Search name…" class="max-w-xs" />
+      <select id="enq-filter-stage" class="max-w-xs"><option value="">All stages</option></select>
+      <select id="enq-filter-vertical" class="max-w-xs">
+        <option value="">All verticals</option>
+        <option value="clinic">Clinic</option>
+        <option value="restaurant">Restaurant</option>
+        <option value="hospitality">Hospitality</option>
+        <option value="professional_services">Professional Services</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="card overflow-hidden">
+      <table>
+        <thead><tr>
+          <th>Lead Name</th><th>Vertical</th><th>Source</th><th>Stage</th><th>Est. Value</th><th>Follow-up</th><th>Created</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="enq-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ CLIENTS ============ -->
+  <section id="tab-clients" class="tab-section hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">Clients</h2>
+      <button class="btn-primary" onclick="openClientModal()">+ Add Client</button>
+    </div>
+    <div class="card overflow-hidden">
+      <table>
+        <thead><tr>
+          <th>Business Name</th><th>Contact</th><th>Vertical</th><th>Retainer</th><th>Services</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="cli-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ACTIVITY LOG ============ -->
+  <section id="tab-activity" class="tab-section hidden">
+    <h2 class="text-xl font-bold mb-4">Activity Log</h2>
+    <div class="card p-4 mb-4 flex gap-3 flex-wrap">
+      <select id="act-entity" class="max-w-xs">
+        <option value="">All entities</option><option value="client">Clients</option><option value="enquiry">Enquiries</option>
+      </select>
+      <select id="act-type" class="max-w-xs">
+        <option value="">All types</option>
+        <option value="call">Call</option><option value="email">Email</option><option value="meeting">Meeting</option>
+        <option value="proposal">Proposal</option><option value="note">Note</option><option value="stage_change">Stage change</option>
+      </select>
+      <input type="date" id="act-from" class="max-w-xs" />
+      <input type="date" id="act-to" class="max-w-xs" />
+    </div>
+    <div class="card overflow-hidden">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Entity</th><th>Description</th></tr></thead>
+        <tbody id="act-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<div id="modal-root"></div>
+
+<script>
+// ============ CONSTANTS ============
+const STAGES = [
+  { key: 'new', label: 'New', color: 'bg-gray-100 text-gray-700' },
+  { key: 'contacted', label: 'Contacted', color: 'bg-blue-100 text-blue-700' },
+  { key: 'audit_sent', label: 'Audit Sent', color: 'bg-indigo-100 text-indigo-700' },
+  { key: 'proposal_sent', label: 'Proposal Sent', color: 'bg-orange-100 text-orange-700' },
+  { key: 'negotiating', label: 'Negotiating', color: 'bg-yellow-100 text-yellow-700' },
+  { key: 'closed_won', label: 'Closed Won', color: 'bg-green-100 text-green-700' },
+  { key: 'closed_lost', label: 'Closed Lost', color: 'bg-red-100 text-red-700' },
+];
+
+const VERTICALS = {
+  clinic: { label: 'Clinic', color: 'bg-purple-100 text-purple-700' },
+  restaurant: { label: 'Restaurant', color: 'bg-yellow-100 text-yellow-700' },
+  hospitality: { label: 'Hospitality', color: 'bg-blue-100 text-blue-700' },
+  professional_services: { label: 'Professional Services', color: 'bg-green-100 text-green-700' },
+  other: { label: 'Other', color: 'bg-gray-100 text-gray-600' },
+};
+
+const SOURCES = ['linkedin','referral','cold_outreach','inbound','chatgpt','other'];
+const SERVICES = ['AIO','SEO','Google Ads','Meta Ads','Local SEO'];
+
+// ============ HELPERS ============
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function fmtTHB(n) { return '฿' + (n || 0).toLocaleString('en-US'); }
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+}
+function fmtDateOnly(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: 'numeric' });
+  } catch { return iso; }
+}
+function isOverdue(iso) {
+  if (!iso) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return new Date(iso) < today;
+}
+
+function stageInfo(key) { return STAGES.find(s => s.key === key) || STAGES[0]; }
+function verticalInfo(key) { return VERTICALS[key] || VERTICALS.other; }
+
+function stageBadge(key) {
+  const s = stageInfo(key);
+  return `<span class="badge ${s.color}">${s.label}</span>`;
+}
+function verticalBadge(key) {
+  const v = verticalInfo(key);
+  return `<span class="badge ${v.color}">${v.label}</span>`;
+}
+
+function parseServices(json) {
+  try { return JSON.parse(json || '[]'); } catch { return []; }
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  return res.json();
+}
+
+// ============ TAB NAV ============
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+function switchTab(tab) {
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  $$('.tab-section').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + tab));
+  if (tab === 'dashboard') loadDashboard();
+  if (tab === 'pipeline') loadPipeline();
+  if (tab === 'enquiries') loadEnquiries();
+  if (tab === 'clients') loadClients();
+  if (tab === 'activity') loadActivity();
+}
+
+// ============ DASHBOARD ============
+let stageChart, vertChart;
+async function loadDashboard() {
+  const d = await api('/api/dashboard');
+  $('#kpi-mrr').textContent = fmtTHB(d.mrr_thb);
+  $('#kpi-clients').textContent = d.active_clients;
+  $('#kpi-enquiries').textContent = d.open_enquiries;
+  $('#kpi-pipeline').textContent = fmtTHB(d.pipeline_value_thb);
+
+  const stageLabels = STAGES.map(s => s.label);
+  const stageData = STAGES.map(s => d.enquiries_by_stage[s.key] || 0);
+
+  if (stageChart) stageChart.destroy();
+  stageChart = new Chart($('#chart-stages'), {
+    type: 'bar',
+    data: { labels: stageLabels, datasets: [{ data: stageData, backgroundColor: '#E07B39' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  const vertLabels = Object.keys(d.clients_by_vertical).map(k => verticalInfo(k).label);
+  const vertData = Object.values(d.clients_by_vertical);
+  if (vertChart) vertChart.destroy();
+  vertChart = new Chart($('#chart-verticals'), {
+    type: 'doughnut',
+    data: { labels: vertLabels, datasets: [{ data: vertData, backgroundColor: ['#A78BFA','#FBBF24','#60A5FA','#34D399','#9CA3AF'] }] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+
+  const ra = $('#recent-activity');
+  ra.innerHTML = d.recent_activity.length === 0
+    ? '<div class="text-sm text-gray-500 py-4">No activity yet.</div>'
+    : d.recent_activity.map(a => `
+      <div class="py-3 flex justify-between gap-4">
+        <div>
+          <div class="font-medium">${a.entity_name || '—'} <span class="text-xs text-gray-500">· ${a.type}</span></div>
+          <div class="text-sm text-gray-600">${a.description}</div>
+        </div>
+        <div class="text-xs text-gray-500 whitespace-nowrap">${fmtDate(a.created_at)}</div>
+      </div>
+    `).join('');
+}
+
+// ============ PIPELINE ============
+async function loadPipeline() {
+  const enquiries = await api('/api/enquiries');
+  const kanban = $('#kanban');
+  kanban.innerHTML = '';
+
+  for (const stage of STAGES) {
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+    col.dataset.stage = stage.key;
+
+    const items = enquiries.filter(e => e.stage === stage.key);
+    col.innerHTML = `
+      <div class="flex items-center justify-between mb-2 px-1">
+        <div class="font-semibold text-sm">${stage.label}</div>
+        <div class="text-xs text-gray-500">${items.length}</div>
+      </div>
+      <div class="kanban-items"></div>
+    `;
+
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drag-over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+    col.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      if (!id) return;
+      await api(`/api/enquiries/${id}/stage`, { method: 'PATCH', body: { stage: stage.key } });
+      loadPipeline();
+    });
+
+    const list = col.querySelector('.kanban-items');
+    for (const enq of items) {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', enq.id));
+      card.addEventListener('click', () => openEnquiryModal(enq));
+      const overdue = isOverdue(enq.follow_up_date);
+      card.innerHTML = `
+        <div class="font-medium text-sm mb-1">${enq.lead_name}</div>
+        <div class="flex gap-1 flex-wrap mb-2">${verticalBadge(enq.vertical)}</div>
+        <div class="text-xs text-gray-600">${enq.source || '—'}</div>
+        <div class="text-sm font-semibold mt-1">${fmtTHB(enq.estimated_value_thb)}</div>
+        ${enq.follow_up_date ? `<div class="text-xs ${overdue ? 'text-red-600 font-semibold' : 'text-gray-500'} mt-1">⏰ ${fmtDateOnly(enq.follow_up_date)}</div>` : ''}
+      `;
+      list.appendChild(card);
+    }
+    kanban.appendChild(col);
+  }
+}
+
+// ============ ENQUIRIES TABLE ============
+let allEnquiries = [];
+async function loadEnquiries() {
+  allEnquiries = await api('/api/enquiries');
+  const sel = $('#enq-filter-stage');
+  if (sel.options.length <= 1) {
+    for (const s of STAGES) sel.innerHTML += `<option value="${s.key}">${s.label}</option>`;
+  }
+  renderEnquiries();
+}
+['#enq-search','#enq-filter-stage','#enq-filter-vertical'].forEach(s => document.addEventListener('input', e => { if (e.target.matches(s)) renderEnquiries(); }));
+
+function renderEnquiries() {
+  const q = ($('#enq-search').value || '').toLowerCase();
+  const stage = $('#enq-filter-stage').value;
+  const vert = $('#enq-filter-vertical').value;
+  const rows = allEnquiries.filter(e =>
+    (!q || (e.lead_name || '').toLowerCase().includes(q)) &&
+    (!stage || e.stage === stage) &&
+    (!vert || e.vertical === vert)
+  );
+  $('#enq-tbody').innerHTML = rows.map(e => `
+    <tr>
+      <td class="font-medium">${e.lead_name}</td>
+      <td>${verticalBadge(e.vertical)}</td>
+      <td>${e.source || '—'}</td>
+      <td>${stageBadge(e.stage)}</td>
+      <td>${fmtTHB(e.estimated_value_thb)}</td>
+      <td class="${isOverdue(e.follow_up_date) ? 'text-red-600 font-semibold' : ''}">${fmtDateOnly(e.follow_up_date)}</td>
+      <td>${fmtDateOnly(e.created_at)}</td>
+      <td>
+        <button class="text-sm text-locully-primary font-semibold" onclick='openEnquiryModal(${JSON.stringify(e)})'>Edit</button>
+        <button class="text-sm text-gray-600 ml-2" onclick="convertEnquiry(${e.id})">Convert</button>
+        <button class="text-sm text-red-600 ml-2" onclick="deleteEnquiry(${e.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" class="text-center text-gray-500 py-6">No enquiries yet.</td></tr>';
+}
+
+async function deleteEnquiry(id) {
+  if (!confirm('Delete this enquiry?')) return;
+  await api(`/api/enquiries/${id}`, { method: 'DELETE' });
+  loadEnquiries();
+}
+
+async function convertEnquiry(id) {
+  if (!confirm('Convert this enquiry to an active client?')) return;
+  await api(`/api/enquiries/${id}/convert`, { method: 'POST' });
+  loadEnquiries();
+  alert('Converted to client.');
+}
+
+// ============ CLIENTS TABLE ============
+let allClients = [];
+async function loadClients() {
+  allClients = await api('/api/clients');
+  $('#cli-tbody').innerHTML = allClients.map(c => `
+    <tr>
+      <td class="font-medium">${c.name}</td>
+      <td>${c.contact_name || '—'}</td>
+      <td>${verticalBadge(c.vertical)}</td>
+      <td>${fmtTHB(c.retainer_thb)}</td>
+      <td class="text-xs">${parseServices(c.services).join(', ') || '—'}</td>
+      <td><span class="badge ${c.status === 'active' ? 'bg-green-100 text-green-700' : c.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}">${c.status}</span></td>
+      <td>
+        <button class="text-sm text-locully-primary font-semibold" onclick='openClientModal(${JSON.stringify(c)})'>Edit</button>
+        <button class="text-sm text-gray-600 ml-2" onclick="viewClient(${c.id})">View</button>
+        <button class="text-sm text-red-600 ml-2" onclick="deleteClient(${c.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="text-center text-gray-500 py-6">No clients yet.</td></tr>';
+}
+async function deleteClient(id) {
+  if (!confirm('Delete this client?')) return;
+  await api(`/api/clients/${id}`, { method: 'DELETE' });
+  loadClients();
+}
+async function viewClient(id) {
+  const c = await api(`/api/clients/${id}`);
+  openClientDetailModal(c);
+}
+
+// ============ ACTIVITY LOG ============
+let allActivities = [];
+async function loadActivity() {
+  allActivities = await api('/api/activities');
+  renderActivity();
+}
+['#act-entity','#act-type','#act-from','#act-to'].forEach(s => document.addEventListener('input', e => { if (e.target.matches(s)) renderActivity(); }));
+
+function renderActivity() {
+  const et = $('#act-entity').value;
+  const t = $('#act-type').value;
+  const from = $('#act-from').value ? new Date($('#act-from').value) : null;
+  const to = $('#act-to').value ? new Date($('#act-to').value + 'T23:59:59') : null;
+  const rows = allActivities.filter(a => {
+    if (et && a.entity_type !== et) return false;
+    if (t && a.type !== t) return false;
+    const d = new Date(a.created_at);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+  $('#act-tbody').innerHTML = rows.map(a => `
+    <tr>
+      <td class="text-xs text-gray-600 whitespace-nowrap">${fmtDate(a.created_at)}</td>
+      <td><span class="badge bg-locully-bg text-gray-700 border border-locully-border">${a.type}</span></td>
+      <td>${a.entity_name || '—'} <span class="text-xs text-gray-400">(${a.entity_type})</span></td>
+      <td>${a.description}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="text-center text-gray-500 py-6">No activity.</td></tr>';
+}
+
+// ============ MODALS ============
+function closeModal() { $('#modal-root').innerHTML = ''; }
+
+function openEnquiryModal(enq) {
+  const isEdit = enq && enq.id;
+  const services = enq ? parseServices(enq.services_interested) : [];
+  $('#modal-root').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold">${isEdit ? 'Edit' : 'New'} Enquiry</h3>
+          <button class="text-gray-500 text-2xl leading-none" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="enq-form" class="space-y-3">
+          <div><label>Lead Name *</label><input name="lead_name" required value="${enq?.lead_name || ''}" /></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Contact Name</label><input name="contact_name" value="${enq?.contact_name || ''}" /></div>
+            <div><label>Vertical</label>
+              <select name="vertical">
+                ${Object.entries(VERTICALS).map(([k,v]) => `<option value="${k}" ${enq?.vertical===k?'selected':''}>${v.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Phone</label><input name="phone" value="${enq?.phone || ''}" /></div>
+            <div><label>Email</label><input name="email" type="email" value="${enq?.email || ''}" /></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Source</label>
+              <select name="source">
+                ${SOURCES.map(s => `<option value="${s}" ${enq?.source===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+            <div><label>Stage</label>
+              <select name="stage">
+                ${STAGES.map(s => `<option value="${s.key}" ${enq?.stage===s.key?'selected':''}>${s.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Estimated Value (THB)</label><input name="estimated_value_thb" type="number" value="${enq?.estimated_value_thb || 0}" /></div>
+            <div><label>Follow-up Date</label><input name="follow_up_date" type="date" value="${enq?.follow_up_date || ''}" /></div>
+          </div>
+          <div>
+            <label>Services Interested</label>
+            <div class="flex flex-wrap gap-3 mt-1">
+              ${SERVICES.map(s => `<label class="flex items-center gap-1 text-sm font-normal"><input type="checkbox" class="w-auto" name="services_interested" value="${s}" ${services.includes(s)?'checked':''}/> ${s}</label>`).join('')}
+            </div>
+          </div>
+          <div><label>Notes</label><textarea name="notes" rows="3">${enq?.notes || ''}</textarea></div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  $('#enq-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.services_interested = fd.getAll('services_interested');
+    body.estimated_value_thb = +body.estimated_value_thb || 0;
+    if (isEdit) {
+      await api(`/api/enquiries/${enq.id}`, { method: 'PUT', body });
+    } else {
+      await api('/api/enquiries', { method: 'POST', body });
+    }
+    closeModal();
+    loadEnquiries();
+    if (!$('#tab-pipeline').classList.contains('hidden')) loadPipeline();
+  });
+}
+
+function openClientModal(cli) {
+  const isEdit = cli && cli.id;
+  const services = cli ? parseServices(cli.services) : [];
+  $('#modal-root').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold">${isEdit ? 'Edit' : 'New'} Client</h3>
+          <button class="text-gray-500 text-2xl leading-none" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="cli-form" class="space-y-3">
+          <div><label>Business Name *</label><input name="name" required value="${cli?.name || ''}" /></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Contact Name</label><input name="contact_name" value="${cli?.contact_name || ''}" /></div>
+            <div><label>Vertical</label>
+              <select name="vertical">
+                ${Object.entries(VERTICALS).map(([k,v]) => `<option value="${k}" ${cli?.vertical===k?'selected':''}>${v.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Phone</label><input name="phone" value="${cli?.phone || ''}" /></div>
+            <div><label>Email</label><input name="email" type="email" value="${cli?.email || ''}" /></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Website</label><input name="website" value="${cli?.website || ''}" /></div>
+            <div><label>Source</label>
+              <select name="source">
+                ${SOURCES.map(s => `<option value="${s}" ${cli?.source===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Retainer (THB)</label><input name="retainer_thb" type="number" value="${cli?.retainer_thb || 0}" /></div>
+            <div><label>Status</label>
+              <select name="status">
+                <option value="active" ${cli?.status==='active'?'selected':''}>Active</option>
+                <option value="paused" ${cli?.status==='paused'?'selected':''}>Paused</option>
+                <option value="churned" ${cli?.status==='churned'?'selected':''}>Churned</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Services</label>
+            <div class="flex flex-wrap gap-3 mt-1">
+              ${SERVICES.map(s => `<label class="flex items-center gap-1 text-sm font-normal"><input type="checkbox" class="w-auto" name="services" value="${s}" ${services.includes(s)?'checked':''}/> ${s}</label>`).join('')}
+            </div>
+          </div>
+          <div><label>Notes</label><textarea name="notes" rows="3">${cli?.notes || ''}</textarea></div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  $('#cli-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.services = fd.getAll('services');
+    body.retainer_thb = +body.retainer_thb || 0;
+    if (isEdit) {
+      await api(`/api/clients/${cli.id}`, { method: 'PUT', body });
+    } else {
+      await api('/api/clients', { method: 'POST', body });
+    }
+    closeModal();
+    loadClients();
+  });
+}
+
+function openClientDetailModal(c) {
+  const services = parseServices(c.services);
+  $('#modal-root').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold">${c.name}</h3>
+          <button class="text-gray-500 text-2xl leading-none" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="space-y-2 text-sm mb-4">
+          <div>${verticalBadge(c.vertical)} <span class="badge bg-gray-100 text-gray-700">${c.status}</span></div>
+          <div><strong>Contact:</strong> ${c.contact_name || '—'}</div>
+          <div><strong>Phone:</strong> ${c.phone || '—'} · <strong>Email:</strong> ${c.email || '—'}</div>
+          <div><strong>Website:</strong> ${c.website || '—'}</div>
+          <div><strong>Retainer:</strong> ${fmtTHB(c.retainer_thb)}</div>
+          <div><strong>Services:</strong> ${services.join(', ') || '—'}</div>
+          <div><strong>Source:</strong> ${c.source || '—'}</div>
+          <div><strong>Notes:</strong> ${c.notes || '—'}</div>
+        </div>
+        <div class="border-t border-locully-border pt-3">
+          <div class="font-semibold mb-2">Activity Timeline</div>
+          <div class="max-h-48 overflow-y-auto divide-y divide-locully-border mb-3">
+            ${(c.activities || []).map(a => `
+              <div class="py-2">
+                <div class="text-sm"><span class="font-medium">${a.type}</span> · ${a.description}</div>
+                <div class="text-xs text-gray-500">${fmtDate(a.created_at)}</div>
+              </div>
+            `).join('') || '<div class="text-sm text-gray-500 py-2">No activity.</div>'}
+          </div>
+          <form id="quick-activity" class="space-y-2">
+            <div class="grid grid-cols-3 gap-2">
+              <select name="type" class="col-span-1">
+                <option value="call">Call</option><option value="email">Email</option>
+                <option value="meeting">Meeting</option><option value="proposal">Proposal</option>
+                <option value="note">Note</option>
+              </select>
+              <input name="description" placeholder="Description" class="col-span-2" required />
+            </div>
+            <button type="submit" class="btn-primary w-full">Log Activity</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+  $('#quick-activity').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    await api('/api/activities', { method: 'POST', body: {
+      entity_type: 'client', entity_id: c.id,
+      type: fd.get('type'), description: fd.get('description')
+    }});
+    const updated = await api(`/api/clients/${c.id}`);
+    openClientDetailModal(updated);
+  });
+}
+
+// ============ INIT ============
+function updateDate() {
+  $('#current-date').textContent = new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+}
+updateDate();
+loadDashboard();
+</script>
+</body>
+</html>

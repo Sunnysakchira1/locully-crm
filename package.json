@@ -1,0 +1,13 @@
+{
+  "name": "locully-crm",
+  "version": "1.0.0",
+  "description": "Locully CRM & Dashboard - internal tool for Locully (Bangkok AI optimization & SEO agency)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.21.0"
+  }
+}
