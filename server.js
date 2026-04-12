@@ -1,8 +1,6 @@
-require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const db = require('./db');
-const metaAds = require('./meta-ads-slack');
 
 const app = express();
 const PORT = 3712;
@@ -300,18 +298,7 @@ app.post('/api/import/client', (req, res) => {
   res.json({ id: info.lastInsertRowid, ...c });
 });
 
-// =================== META ADS WORKFLOW ===================
-app.get('/api/meta-ads/summary', async (req, res) => {
-  try {
-    const result = await metaAds.runDailySummary();
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // -------- start --------
 app.listen(PORT, () => {
   console.log(`Locully CRM running on http://localhost:${PORT}`);
-  metaAds.scheduleDailySummary();
 });
