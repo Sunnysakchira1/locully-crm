@@ -8,6 +8,9 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
-    "express": "^4.21.0"
+    "dotenv": "^17.4.1",
+    "express": "^4.21.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.5"
   }
 }
